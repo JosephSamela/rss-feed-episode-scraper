@@ -12,17 +12,6 @@ class feed():
 
         self.parse_feed(self.url)
 
-        for episode in self.episodes:
-            threading.Thread(target=self.download, args=(episode,)).start()
-
-    def download(self, episode):
-        os.system('wget {} -O ./eps/"{} - {}.{}"'.format(
-            episode.url,     # File url
-            episode.title,   # Episode title
-            self.title,      # Feed title
-            episode.url.split('.')[-1] # File extension
-            ))
-
     def parse_feed(self, feed_url, days_past=5):
         # Get rss feed from url
         r = requests.get(feed_url)
@@ -40,15 +29,29 @@ class feed():
 
             # Find episodes released in the past 1 day
             if date > datetime.utcnow() - timedelta(days=days_past):
-                title = ep['title']
-                url   = ep['guid']
-                self.episodes.append(episode(title, url, date))
+                self.episodes.append(episode(
+                    self.title, # feedtitle 
+                    ep['title'],# episode title
+                    ep['guid'], # episode url
+                    date        # episode date
+                    ))
 
 class episode():
-    def __init__(self, title, url, date):
+    def __init__(self, feedtitle, title, url, date):
+        self.feedtitle = title
         self.title = title
         self.url   = url
         self.date  = date
+        # Download episode in new thread
+        threading.Thread(target=self.download).start()
+
+    def download(self):
+        os.system('wget {} -O ./downloads/"{} - {}.{}"'.format(
+            self.url,               # File url
+            self.title,             # Episode title
+            self.feedtitle,         # Feed title
+            self.url.split('.')[-1] # File extension
+            ))
 
 def read_feed_list(path):
     # Read feeds from textfile
